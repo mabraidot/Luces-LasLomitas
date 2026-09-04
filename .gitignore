@@ -1,0 +1,14 @@
+# Credenciales. La plantilla (Secrets.h.template) si se versiona.
+Secrets.h
+
+# Salida de compilacion
+build/
+*.bin
+*.elf
+*.map
+*.hex
+
+# Configuracion de IntelliSense: tiene rutas absolutas con el nombre de
+# usuario y la version del core de esta maquina, asi que no sirve en otra.
+# Se regenera desde el IDE o la extension de Arduino.
+.vscode/c_cpp_properties.json
