@@ -30,4 +30,15 @@ void timeSyncLoop();
 // Segundos desde la ultima sincronizacion exitosa, o -1 si nunca hubo.
 int32_t timeSyncAge();
 
+/*
+  Ultima diferencia medida entre NTP y el RTC, en segundos y CON SIGNO:
+  positivo = el RTC atrasa. Devuelve false si todavia no hubo ninguna medicion,
+  que no es lo mismo que una diferencia de cero.
+
+  No hay sentinela posible: con un RTC en 1970 la diferencia legitima son mil
+  millones de segundos, asi que cualquier valor "imposible" que se eligiera
+  podria ser real.
+*/
+bool timeSyncDiff(int32_t &seconds);
+
 #endif // TIMESYNC_H

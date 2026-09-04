@@ -26,6 +26,11 @@ static bool     everSynced  = false;
 static uint32_t lastSntpAt  = 0;
 static bool     sntpEver    = false;
 
+// Ultima diferencia medida entre NTP y el RTC, con signo: positivo = el RTC
+// atrasa. Sirve para medir la deriva del cristal sin tener que reiniciar.
+static int32_t  lastDiff    = 0;
+static bool     hasDiff     = false;
+
 /*
   Dias desde 1970-01-01 para una fecha civil (algoritmo de Howard Hinnant).
 
@@ -148,22 +153,46 @@ void timeSyncLoop() {
   if (clockIsOk() && clockGet(dt)) {
     int64_t rtcEpoch = localEpoch(dt.year, dt.month, dt.day,
                                   dt.hour, dt.minute, dt.second);
-    int64_t diff = ntpEpoch - rtcEpoch;
-    if (diff < 0) {
-      diff = -diff;
+    int64_t diff  = ntpEpoch - rtcEpoch;
+    int64_t adiff = (diff < 0) ? -diff : diff;
+
+    /*
+      Se guarda acotado. Un RTC en 1970, o en un año absurdo despues de una
+      lectura sucia, da una diferencia que no entra en 32 bits; de un numero
+      asi lo unico que interesa es que es enorme.
+    */
+    const int64_t CAP = 2000000000LL;
+    int64_t shown = (diff > CAP) ? CAP : ((diff < -CAP) ? -CAP : diff);
+    lastDiff = (int32_t)shown;
+    hasDiff  = true;
+
+    /*
+      Se loguea en CADA chequeo, no solo en el primero.
+
+      Con el periodo de 6 h son cuatro lineas por dia, y la serie de esas
+      lineas es lo unico que permite medir la deriva del cristal del RTC: la
+      pendiente entre dos puntos separados 6 h da los segundos por dia. Un
+      valor suelto no dice nada, porque el DS1302 tiene resolucion de 1 s y esa
+      cuantizacion sola vale mas que la deriva de unas horas.
+    */
+    if (shown == 0) {
+      logPrintf("NTP: el RTC esta en hora");
+    } else {
+      logPrintf("NTP: el RTC %s %ld s",
+                (shown > 0) ? "atrasa" : "adelanta",
+                (long)((shown < 0) ? -shown : shown));
     }
 
     if (!everSynced) {
       everSynced = true;
       lastSyncAt = now;
-      logPrintf("NTP: ok, el RTC difiere %ld s", (long)diff);
     }
 
-    if (diff < NTP_MIN_DIFF_SECONDS) {
+    if (adiff < NTP_MIN_DIFF_SECONDS) {
       lastSyncAt = now;
       return;
     }
-    logPrintf("NTP: corrigiendo el RTC, %ld s de diferencia", (long)diff);
+    logPrintf("NTP: corrigiendo el RTC, %ld s de diferencia", (long)shown);
   }
 
   if (!clockSet((uint8_t)lt.tm_hour, (uint8_t)lt.tm_min, (uint8_t)lt.tm_sec,
@@ -179,6 +208,14 @@ void timeSyncLoop() {
 
   everSynced = true;
   lastSyncAt = now;
+}
+
+bool timeSyncDiff(int32_t &seconds) {
+  if (!hasDiff) {
+    return false;
+  }
+  seconds = lastDiff;
+  return true;
 }
 
 int32_t timeSyncAge() {

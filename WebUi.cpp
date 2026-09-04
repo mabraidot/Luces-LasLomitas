@@ -31,8 +31,19 @@ static ESP8266WebServer server(WEB_PORT);
 static char resetReason[24] = "?";
 
 static void sendStatus() {
-  static char status[560];
+  static char status[600];
   char ip[16];
+
+  /*
+    La deriva del RTC viaja como texto para poder mandar null: sin medicion no
+    hay numero que sirva de sentinela, porque una diferencia enorme es un valor
+    legitimo (un RTC parado en 1970 da mil millones).
+  */
+  char ntpDiff[16] = "null";
+  int32_t diff;
+  if (timeSyncDiff(diff)) {
+    snprintf(ntpDiff, sizeof(ntpDiff), "%ld", (long)diff);
+  }
 
   IPAddress addr = netIP();
   snprintf(ip, sizeof(ip), "%u.%u.%u.%u", addr[0], addr[1], addr[2], addr[3]);
@@ -43,6 +54,7 @@ static void sendStatus() {
            "{\"on\":%u,\"l\":%u,\"r\":%u,\"rdy\":%u,\"sw\":%u,"
            "\"t\":\"%s\",\"rtc\":%u,\"arm\":%u,\"mode\":\"%s\","
            "\"why\":\"%s\",\"cd\":%d,\"cu\":%d,\"lb\":%u,\"cs\":%u,\"ntp\":%ld,"
+           "\"ntpd\":%s,"
            "\"th\":%u,\"hy\":%u,\"bt\":%u,\"w0\":%u,\"w1\":%u,"
            "\"mx\":%u,\"rn\":%u,\"rd\":%u,"
            "\"ip\":\"%s\",\"db\":%ld,\"up\":%lu,\"heap\":%u,"
@@ -62,6 +74,7 @@ static void sendStatus() {
            (unsigned)lightControllerLampBoost(),
            lightControllerClearUnsafe() ? 1u : 0u,
            (long)timeSyncAge(),
+           ntpDiff,
            (unsigned)cfg.threshold,
            (unsigned)cfg.hysteresis,
            (unsigned)cfg.bedtime,

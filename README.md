@@ -528,7 +528,7 @@ saturan la ESP—, y pausa del sondeo con la pestaña oculta.
 
 El bloque de **diagnóstico** existe porque en la instalación no hay monitor
 serie: motivo del último reinicio, uptime, memoria libre, RSSI, aporte de la
-lámpara y el log en RAM.
+lámpara, la deriva del RTC contra NTP y el log en RAM.
 
 ### Poner el reloj en hora
 
@@ -573,6 +573,12 @@ cuándo sincronizó SNTP **de verdad**, y una hora de más de **3 h** no pisa el
 RTC. La lwip del core reintenta cada hora, así que 3 h son tres intentos
 fallidos. Saltear una corrección no cuesta nada: el RTC sigue llevando la hora y
 se corrige en el próximo chequeo con internet.
+
+**Para medir la deriva del cristal:** cada chequeo loguea la diferencia con
+signo — `NTP: el RTC atrasa 3 s` —, no sólo el primero, y la web la muestra en
+*RTC contra NTP*. Cuatro puntos separados 6 h dan la pendiente en segundos por
+día. Un valor suelto no dice nada: el DS1302 tiene resolución de 1 s, y sobre 4 h
+esa cuantización sola vale ±69 ppm — más que la deriva que se quiere medir.
 
 ---
 

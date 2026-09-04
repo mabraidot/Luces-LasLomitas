@@ -140,6 +140,7 @@ details[open] summary::before{content:"\25BE ";}
    <div class="row"><span class="k">Último reinicio</span><span class="v" id="rst">--</span></div>
    <div class="row"><span class="k">Encendida hace</span><span class="v" id="up">--</span></div>
    <div class="row"><span class="k">Sincronizó hace</span><span class="v" id="ntp">--</span></div>
+   <div class="row"><span class="k">RTC contra NTP</span><span class="v" id="ntpd">--</span></div>
    <div class="row"><span class="k">Llave</span><span class="v" id="sw">--</span></div>
    <div class="row"><span class="k">WiFi</span><span class="v" id="wifi">--</span></div>
    <div class="row"><span class="k">Aporte de la lámpara</span><span class="v" id="lb">--</span></div>
@@ -213,6 +214,10 @@ function show(d){
   :'';
  $('hywarn').className=d.cs?'note err':'note';
  $('ntp').textContent=d.ntp<0?'nunca':dur(d.ntp);
+ /* Con signo: el RTC atrasa cuando NTP va adelante. La serie de estos valores
+    cada 6 h es lo que da la deriva del cristal en segundos por dia. */
+ $('ntpd').textContent=d.ntpd===null?'--'
+  :(d.ntpd?(d.ntpd>0?'atrasa ':'adelanta ')+Math.abs(d.ntpd)+' s':'en hora');
  $('sw').textContent=d.sw?'cerrada':'abierta';
  $('wifi').textContent=d.ip+' · '+d.db+' dBm';
  $('rst').textContent=d.rst;
