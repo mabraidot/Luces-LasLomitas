@@ -596,10 +596,18 @@ Requiere el core **ESP8266 3.1.2** y la librería
 2. Placa: **NodeMCU 1.0 (ESP-12E Module)**.
 3. **CPU Frequency: 160 MHz.** Duplica el rendimiento del parsing HTTP y es
    gratis.
-4. Subir por USB la primera vez; después por red.
+4. **Flash Size: 4MB (FS:none, OTA:~1019KB).** El proyecto no usa LittleFS — la
+   página y el icono viven en PROGMEM —, así que reservar filesystem sólo recorta
+   el espacio libre que la OTA necesita para escribir la imagen nueva mientras
+   corre la vieja. El binario anda por los 372 KB: con `FS:none` el tope de OTA
+   es ~1019 KB, con `FS:3MB` sería ~512 KB. Los ajustes guardados no dependen de
+   esto: el sector de EEPROM está en `0x405fb000` en los tres layouts.
+5. Subir por USB la primera vez; después por red. Por USB, **Erase Flash: Only
+   Sketch**. Con *All Flash Contents* se borra la EEPROM, y con ella el umbral,
+   las ventanas y la calibración del LDR.
 
 ```
-arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2 .
+arduino-cli compile --fqbn esp8266:esp8266:nodemcuv2:xtal=160,eesz=4M .
 ```
 
 Para regenerar el icono después de cambiar el dibujo o los colores:
