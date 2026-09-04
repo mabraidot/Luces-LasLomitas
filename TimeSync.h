@@ -9,7 +9,8 @@
   Como el WiFi ya esta, NTP lo resuelve de raiz. La jerarquia queda asi:
 
     NTP     sincroniza al conectar y cada 6 h, y escribe al RTC solo si la
-            diferencia importa.
+            diferencia importa Y si la hora es fresca: una que quedo corriendo
+            sola porque se cayo internet no puede pisar al RTC.
     RTC     cubre los cortes de luz y las caidas de WiFi. Es la fuente que lee
             el controlador, SIEMPRE: la logica no necesita saber de donde vino
             la hora ni si hay red.

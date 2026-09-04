@@ -140,6 +140,21 @@
 #define NTP_MIN_DIFF_SECONDS      60
 // Debajo de esto, time(nullptr) todavia no sincronizo (es 2020-09-13).
 #define NTP_EPOCH_PLAUSIBLE       1600000000UL
+/*
+  Cuanto vale una sincronizacion antes de darla por vencida.
+
+  Que el epoch sea plausible no alcanza: una vez que SNTP puso la hora, el
+  reloj de sistema de la ESP sigue corriendo solo aunque no vuelva a hablar con
+  ningun servidor, asi que time(nullptr) queda plausible para siempre. Con el
+  router prendido y sin internet -- un Starlink caido -- eso alcanzaria para
+  que la placa "corrija" el DS1302, que tiene cristal, contra su propio
+  oscilador interno.
+
+  La lwip del core reintenta SNTP cada hora, asi que 3 h son tres intentos
+  fallidos: margen de sobra para no descartar una sincronizacion buena por unos
+  paquetes perdidos, y corto frente a las 6 h que hay entre chequeos.
+*/
+#define NTP_FRESH_MS              10800000UL   // 3 h
 
 // ---- OTA -----------------------------------------------------------------
 // 8266 es el que espera el IDE de Arduino. La contrasena vive en Secrets.h.

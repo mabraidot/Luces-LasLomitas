@@ -10,10 +10,21 @@
 #include "Log.h"
 
 #include <time.h>
+#include <coredecls.h>          // settimeofday_cb
 
 static uint32_t lastCheckAt = 0;
 static uint32_t lastSyncAt  = 0;
 static bool     everSynced  = false;
+
+/*
+  Marca de la ultima vez que SNTP puso la hora DE VERDAD.
+
+  No hace falta volatile ni proteger el acceso: el core no llama al callback
+  desde una interrupcion, lo agenda con schedule_recurrent_function_us() y
+  corre en el mismo contexto que loop().
+*/
+static uint32_t lastSntpAt  = 0;
+static bool     sntpEver    = false;
 
 /*
   Dias desde 1970-01-01 para una fecha civil (algoritmo de Howard Hinnant).
@@ -43,6 +54,24 @@ static int64_t localEpoch(uint16_t year, uint8_t month, uint8_t day,
 }
 
 void timeSyncInit() {
+  lastSntpAt = 0;
+  sntpEver   = false;
+
+  /*
+    El callback va ANTES de configTime() para no perderse la primera
+    sincronizacion, que llega a los pocos segundos de conectar.
+
+    El argumento distingue el origen: es true solo cuando la hora la puso el
+    cliente SNTP. Un settimeofday() nuestro llega con false y no cuenta como
+    sincronizacion, que es exactamente lo que queremos.
+  */
+  settimeofday_cb([](bool fromSntp) {
+    if (fromSntp) {
+      lastSntpAt = millis();
+      sntpEver   = true;
+    }
+  });
+
   /*
     Se pide UTC (desplazamiento 0) y despues se corre a mano. Argentina es
     UTC-3 fijo, sin horario de verano, asi que un desplazamiento constante es
@@ -81,6 +110,29 @@ void timeSyncLoop() {
   */
   time_t utc = time(nullptr);
   if ((uint32_t)utc < NTP_EPOCH_PLAUSIBLE) {
+    return;
+  }
+
+  /*
+    El segundo guard: frescura.
+
+    El de arriba descarta el 1970 del arranque, pero no el caso contrario, que
+    es el que se da con el router prendido y sin internet: la hora se puso hace
+    dias y desde entonces corre libre sobre el oscilador de la ESP. Sin esto el
+    codigo la tomaria por buena y le escribiria al RTC la deriva acumulada,
+    degradando la unica fuente de hora que sobrevive los cortes de luz.
+
+    Que se salte una correccion no cuesta nada: el RTC sigue llevando la hora y
+    en el proximo chequeo, ya con internet, se corrige.
+  */
+  if (!sntpEver || (now - lastSntpAt) > NTP_FRESH_MS) {
+    // Solo con el periodo de 6 h. Antes de la primera sincronizacion se vuelve
+    // por aca cada 8 s y el log seria una catarata. everSynced implica
+    // sntpEver, asi que si se loguea, lastSntpAt es un valor real.
+    if (everSynced) {
+      logPrintf("NTP: sin sincronizar hace %lu min, no toco el RTC",
+                (unsigned long)((now - lastSntpAt) / 60000UL));
+    }
     return;
   }
 

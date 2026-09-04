@@ -563,6 +563,17 @@ devuelve un valor cercano a 0, o sea 1970. Escribir eso al RTC destruiría la
 hora buena que ya tenía. No es un riesgo teórico: pasa en **cada arranque**
 durante los primeros segundos, así que sin el guard falla siempre.
 
+**Y el guard simétrico, el de frescura:** una vez que SNTP puso la hora, el
+reloj de sistema de la ESP sigue corriendo solo aunque no vuelva a hablar con
+ningún servidor, así que `time(nullptr)` queda plausible para siempre. Con el
+router prendido y sin internet — un Starlink caído es exactamente eso — la placa
+terminaría “corrigiendo” el DS1302, que tiene cristal, contra su propio oscilador
+interno, y peor cuanto más durara el corte. Por eso `settimeofday_cb()` anota
+cuándo sincronizó SNTP **de verdad**, y una hora de más de **3 h** no pisa el
+RTC. La lwip del core reintenta cada hora, así que 3 h son tres intentos
+fallidos. Saltear una corrección no cuesta nada: el RTC sigue llevando la hora y
+se corrige en el próximo chequeo con internet.
+
 ---
 
 ## Ajustes
