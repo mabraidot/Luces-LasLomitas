@@ -78,10 +78,11 @@ button.mini{padding:6px 9px;font-size:12px;margin-left:6px}
 .note{font-size:11px;color:var(--mu);margin:8px 2px 14px;line-height:1.5}
 .note.ok{color:var(--am)}
 .note.err{color:var(--bad)}
-details summary{color:var(--mu);font-size:13px;cursor:pointer;padding:10px 2px;list-style:none}
-details summary::-webkit-details-marker{display:none}
-details summary::before{content:"\25B8 ";}
-details[open] summary::before{content:"\25BE ";}
+/* Fila de pestanas: dos botones al ancho de la tarjeta. Antes eran <summary>
+   de un <details> y con el dedo costaba acertarles. */
+.tabs{margin:0 0 12px}
+.tabs button{padding:12px 10px;font-size:14px}
+.tabs button[aria-expanded=true]{border-color:var(--am);color:var(--am)}
 #log{background:#010409;border:1px solid var(--ln);border-radius:8px;margin:10px 0;
  padding:10px;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;color:#9fb0c0;
  white-space:pre-wrap;overflow-x:auto;max-height:230px;overflow-y:auto}
@@ -111,8 +112,12 @@ details[open] summary::before{content:"\25BE ";}
   <div class="row"><span class="k">Último cambio</span><span class="v" id="why">--</span></div>
  </div>
 
- <details id="cf">
-  <summary>Ajustes</summary>
+ <div class="btns tabs">
+  <button id="bcf" aria-expanded="false" aria-controls="cf">Ajustes</button>
+  <button id="bdg" aria-expanded="false" aria-controls="dg">Diagnóstico</button>
+ </div>
+
+ <div id="cf" hidden>
   <div class="card">
    <div class="frow"><label for="th">Umbral de luz<span class="sub" id="thnow"></span></label><input id="th" type="number" min="0" max="100"></div>
    <div class="frow"><label for="hy">Histéresis de rearme</label><input id="hy" type="number" min="0" max="50"></div>
@@ -132,10 +137,9 @@ details[open] summary::before{content:"\25BE ";}
 
   <div class="btns"><button class="pri" id="save">Guardar</button><button id="sett">Poner en hora</button></div>
   <p class="note" id="msg"></p>
- </details>
+ </div>
 
- <details id="dg">
-  <summary>Diagnóstico</summary>
+ <div id="dg" hidden>
   <div class="card">
    <div class="row"><span class="k">Último reinicio</span><span class="v" id="rst">--</span></div>
    <div class="row"><span class="k">Encendida hace</span><span class="v" id="up">--</span></div>
@@ -148,7 +152,7 @@ details[open] summary::before{content:"\25BE ";}
    <div class="row"><span class="k">Memoria libre</span><span class="v" id="heap">--</span></div>
   </div>
   <div id="log">--</div>
- </details>
+ </div>
 </div>
 
 <script>
@@ -242,7 +246,7 @@ function tick(){
 function plan(){clearTimeout(timer);if(!document.hidden)timer=setTimeout(tick,2000)}
 
 function tickLog(){
- if(!$('dg').open||document.hidden){logT=setTimeout(tickLog,2000);return}
+ if($('dg').hidden||document.hidden){logT=setTimeout(tickLog,2000);return}
  fetch('/l',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
   $('log').textContent=d.lines.join('\n');
  }).catch(function(){}).then(function(){logT=setTimeout(tickLog,5000)});
@@ -258,10 +262,22 @@ $('bulb').addEventListener('keydown',function(e){
  if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}
 });
 
-$('cf').addEventListener('toggle',function(){
- cfgOpen=$('cf').open;
+/* Una sola seccion abierta a la vez: abrir una cierra la otra. */
+function panel(id){
+ var abrir=$(id).hidden;
+ $('cf').hidden=$('dg').hidden=true;
+ $('bcf').setAttribute('aria-expanded','false');
+ $('bdg').setAttribute('aria-expanded','false');
+ if(abrir){
+  $(id).hidden=false;
+  $('b'+id).setAttribute('aria-expanded','true');
+ }
+ cfgOpen=!$('cf').hidden;
  if(cfgOpen&&last){fill(last);msg('')}
-});
+}
+$('bcf').addEventListener('click',function(){panel('cf')});
+$('bdg').addEventListener('click',function(){panel('dg')});
+
 $('usern').addEventListener('click',function(){if(last)$('rn').value=last.r});
 $('userd').addEventListener('click',function(){if(last)$('rd').value=last.r});
 
