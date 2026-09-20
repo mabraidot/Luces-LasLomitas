@@ -61,7 +61,7 @@ static void sanitize(SettingsData &s) {
   if (s.threshold > 100) {
     s.threshold = DEFAULTS.threshold;
   }
-  if (s.hysteresis > 50) {
+  if (s.hysteresis > 100) {
     s.hysteresis = DEFAULTS.hysteresis;
   }
 

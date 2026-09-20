@@ -120,7 +120,7 @@ button.mini{padding:6px 9px;font-size:12px;margin-left:6px}
  <div id="cf" hidden>
   <div class="card">
    <div class="frow"><label for="th">Umbral de luz<span class="sub" id="thnow"></span></label><input id="th" type="number" min="0" max="100"></div>
-   <div class="frow"><label for="hy">Histéresis de rearme</label><input id="hy" type="number" min="0" max="50"></div>
+   <div class="frow"><label for="hy">Histéresis de rearme</label><input id="hy" type="number" min="0" max="100"></div>
    <div class="frow"><label for="bt">Hora de dormir</label><input id="bt" type="time"></div>
    <div class="frow"><label for="w0">Ventana segura desde</label><input id="w0" type="time"></div>
    <div class="frow"><label for="w1">Ventana segura hasta</label><input id="w1" type="time"></div>
