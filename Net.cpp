@@ -24,7 +24,9 @@ static NetState state       = NET_CONNECTING;
 static uint32_t stateAt     = 0;
 static uint32_t waitMs      = NET_BACKOFF_1_MS;
 static uint8_t  failures    = 0;
-static uint32_t heartbeatAt = 0;
+static uint32_t healthAt    = 0;
+static bool     weakSignal  = false;
+static bool     lowHeap     = false;
 static bool     mdnsUp      = false;
 static bool     nbnsUp      = false;
 
@@ -147,6 +149,41 @@ static void announceConnected() {
   logPrintf("  OTA: %s en Puertos de red del IDE", NET_HOSTNAME);
 }
 
+/*
+  Latido al reves: mientras todo anda bien no se escribe nada.
+
+  El buffer de log tiene LOG_LINES lugares y es lo unico que queda de lo que
+  paso cuando nadie estaba mirando. Una linea periodica de "todo ok" no agrega
+  nada que la pagina de diagnostico no muestre en vivo, y en cambio empuja
+  fuera del buffer justo las lineas que explicarian una falla.
+
+  Se avisa entonces solo en los cruces de umbral, una vez por cruce: cuando la
+  senal cae al nivel en que la conexion se empieza a cortar, o cuando la
+  memoria libre baja al punto en que la ESP se reinicia sola. El umbral de
+  vuelta es mas exigente que el de ida para que un valor rondando el limite no
+  llene el log alternando aviso y recuperacion.
+*/
+static void checkHealth() {
+  long     rssi = (long)WiFi.RSSI();
+  unsigned heap = (unsigned)ESP.getFreeHeap();
+
+  if (!weakSignal && rssi <= NET_RSSI_WEAK_DBM) {
+    weakSignal = true;
+    logPrintf("WiFi: senal debil, %ld dBm", rssi);
+  } else if (weakSignal && rssi >= NET_RSSI_OK_DBM) {
+    weakSignal = false;
+    logPrintf("WiFi: senal normalizada, %ld dBm", rssi);
+  }
+
+  if (!lowHeap && heap <= NET_HEAP_LOW_BYTES) {
+    lowHeap = true;
+    logPrintf("Memoria libre baja: %u bytes", heap);
+  } else if (lowHeap && heap >= NET_HEAP_OK_BYTES) {
+    lowHeap = false;
+    logPrintf("Memoria libre normalizada: %u bytes", heap);
+  }
+}
+
 // Parpadeo lento buscando red, fijo al conectar. Sin necesidad de Serial,
 // resuelve el "se conecto o no" parado abajo de la galeria.
 static void updateLed() {
@@ -167,7 +204,9 @@ void netInit() {
 
   failures    = 0;
   waitMs      = NET_BACKOFF_1_MS;
-  heartbeatAt = millis();
+  healthAt    = millis();
+  weakSignal  = false;
+  lowHeap     = false;
 
   logPrintf("WiFi: conectando a %s", WIFI_SSID);
   startConnecting();
@@ -185,7 +224,8 @@ void netLoop() {
         waitMs   = NET_BACKOFF_1_MS;
         setState(NET_CONNECTED);
         announceConnected();
-        heartbeatAt = now;
+        healthAt   = now;
+        weakSignal = false;
         break;
       }
       if (now - stateAt >= NET_CONNECT_TIMEOUT_MS) {
@@ -223,10 +263,9 @@ void netLoop() {
       if (mdnsUp) {
         MDNS.update();
       }
-      if (now - heartbeatAt >= NET_HEARTBEAT_MS) {
-        heartbeatAt = now;
-        logPrintf("WiFi ok, %ld dBm, heap %u",
-                  (long)WiFi.RSSI(), (unsigned)ESP.getFreeHeap());
+      if (now - healthAt >= NET_HEALTH_MS) {
+        healthAt = now;
+        checkHealth();
       }
       break;
   }

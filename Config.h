@@ -86,7 +86,11 @@
 #define NET_BACKOFF_2_MS      30000UL
 #define NET_BACKOFF_MAX_MS    60000UL
 #define NET_RADIO_RESET_TRIES 10       // destrabar la pila WiFi cada N fallos
-#define NET_HEARTBEAT_MS      900000UL // latido por Serial cada 15 min
+#define NET_HEALTH_MS         60000UL  // cada cuanto se miran senal y memoria
+#define NET_RSSI_WEAK_DBM     (-75)    // debajo de esto la conexion se empieza a cortar
+#define NET_RSSI_OK_DBM       (-70)    // histeresis: recien aca se da por recuperada
+#define NET_HEAP_LOW_BYTES    8000     // debajo de esto la ESP se reinicia sola
+#define NET_HEAP_OK_BYTES     12000    // idem histeresis, para no alternar los avisos
 #define NET_BLINK_MS          400      // parpadeo del LED buscando red
 
 // ---- Ajustes: valores por defecto ---------------------------------------
